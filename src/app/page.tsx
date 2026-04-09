@@ -1,65 +1,130 @@
-import Image from "next/image";
+'use client';
+import { useState, useRef, FormEvent } from 'react';
+import type { ApiWeatherResponse } from '@/lib/types';
+import WeatherDisplay from '@/components/WeatherDisplay';
+
+const EXAMPLES = ['KIPT', 'KORD', 'KJFK', 'KLAX', 'KSFO', 'KDEN', 'KBOS', 'KMIA'];
 
 export default function Home() {
+  const [input, setValue] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [data, setData] = useState<ApiWeatherResponse | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function lookup(station: string) {
+    const s = station.trim().toUpperCase();
+    if (!s) return;
+    setValue(s);
+    setLoading(true);
+    setError('');
+    setData(null);
+
+    try {
+      const res = await fetch(`/api/weather?station=${encodeURIComponent(s)}`);
+      const json: ApiWeatherResponse = await res.json();
+      if (json.error) {
+        setError(json.error);
+      } else {
+        setData(json);
+      }
+    } catch {
+      setError('Network error. Check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    lookup(input);
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-slate-900 text-slate-100">
+      {/* Header */}
+      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+          <span className="text-sky-400 font-bold text-lg tracking-tight">METAR/TAF</span>
+          <span className="text-slate-500 text-sm hidden sm:inline">Aviation Weather Practice Reader</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+        {/* Search */}
+        <div className="max-w-lg mx-auto">
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={e => setValue(e.target.value.toUpperCase())}
+              placeholder="Airport code (e.g. KIPT)"
+              maxLength={4}
+              className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 font-mono text-lg uppercase"
+              autoFocus
+              aria-label="Airport ICAO code"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-5 py-2.5 rounded-lg transition-colors cursor-pointer"
+            >
+              {loading ? '…' : 'Look Up'}
+            </button>
+          </form>
+
+          {/* Quick examples */}
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <span className="text-xs text-slate-500 self-center">Try:</span>
+            {EXAMPLES.map(code => (
+              <button
+                key={code}
+                onClick={() => lookup(code)}
+                className="text-xs px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded font-mono transition-colors cursor-pointer"
+              >
+                {code}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Error */}
+        {error && (
+          <div className="max-w-lg mx-auto bg-red-950 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="text-center text-slate-400 text-sm py-8">
+            Fetching weather data…
+          </div>
+        )}
+
+        {/* Results */}
+        {data && !loading && <WeatherDisplay data={data} />}
+
+        {/* Help text when empty */}
+        {!data && !loading && !error && (
+          <div className="max-w-2xl mx-auto text-center space-y-3 py-8">
+            <p className="text-slate-400">Enter a 4-letter ICAO airport code to retrieve live METAR and TAF data.</p>
+            <div className="text-xs text-slate-600 space-y-1">
+              <p>Use the <span className="text-slate-400 font-semibold">Raw</span> view to read reports as pilots receive them.</p>
+              <p>Use <span className="text-slate-400 font-semibold">Decoded</span> to see each field explained with plain-English meanings.</p>
+              <p>Use <span className="text-slate-400 font-semibold">Side by Side</span> to compare raw and decoded together.</p>
+              <p className="pt-2">Hover over any token in the raw view for a quick tooltip.</p>
+            </div>
+          </div>
+        )}
       </main>
+
+      <footer className="border-t border-slate-800 mt-16 py-4 text-center text-xs text-slate-600">
+        Weather data from{' '}
+        <span className="text-slate-500">aviationweather.gov</span>
+        {' '}· For training purposes only · Not for navigation
+      </footer>
     </div>
   );
 }
