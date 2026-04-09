@@ -13,8 +13,10 @@ export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function lookup(station: string) {
-    const s = station.trim().toUpperCase();
+    let s = station.trim().toUpperCase();
     if (!s) return;
+    // Auto-prefix K for 3-letter US FAA identifiers (e.g. "ORD" → "KORD")
+    if (/^[A-Z]{3}$/.test(s)) s = 'K' + s;
     setValue(s);
     setLoading(true);
     setError('');
@@ -59,11 +61,10 @@ export default function Home() {
               type="text"
               value={input}
               onChange={e => setValue(e.target.value.toUpperCase())}
-              placeholder="Airport code (e.g. KIPT)"
-              maxLength={4}
+              placeholder="ICAO or FAA code (e.g. KIPT, ORD)"
               className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 font-mono text-lg uppercase"
               autoFocus
-              aria-label="Airport ICAO code"
+              aria-label="Airport identifier"
             />
             <button
               type="submit"

@@ -90,6 +90,14 @@ export default function WeatherDisplay({ data }: { data: ApiWeatherResponse }) {
         </Section>
       )}
 
+      {/* No TAF notice */}
+      {metar && !taf && (
+        <div className="flex items-start gap-3 bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-400">
+          <span className="text-slate-500 mt-0.5">ℹ</span>
+          <p>No TAF is available for this airport. TAFs are only issued for airports with scheduled commercial service or those designated by the NWS — smaller general aviation fields typically have METAR only.</p>
+        </div>
+      )}
+
       {!metar && !taf && (
         <p className="text-slate-500 text-sm">No data available.</p>
       )}

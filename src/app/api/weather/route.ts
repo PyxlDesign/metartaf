@@ -5,9 +5,9 @@ export async function GET(request: NextRequest) {
   const raw = request.nextUrl.searchParams.get('station') ?? '';
   const station = raw.toUpperCase().trim();
 
-  if (!station || !/^[A-Z]{3,4}$/.test(station)) {
+  if (!station || !/^[A-Z0-9]{2,6}$/.test(station)) {
     return NextResponse.json<ApiWeatherResponse>(
-      { error: 'Enter a valid 3–4 letter ICAO airport code (e.g. KIPT).' },
+      { error: 'Enter an airport identifier (e.g. KIPT or KORD).' },
       { status: 400 }
     );
   }
@@ -24,22 +24,26 @@ export async function GET(request: NextRequest) {
       ),
     ]);
 
-    if (!metarRes.ok || !tafRes.ok) {
-      return NextResponse.json<ApiWeatherResponse>(
-        { error: 'Failed to reach aviationweather.gov. Try again.' },
-        { status: 502 }
-      );
-    }
+    const safeJson = async (res: Response): Promise<Record<string, unknown>[]> => {
+      try {
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
+    };
 
-    const metarData: Record<string, unknown>[] = await metarRes.json();
-    const tafData: Record<string, unknown>[] = await tafRes.json();
+    const [metarData, tafData] = await Promise.all([
+      safeJson(metarRes),
+      safeJson(tafRes),
+    ]);
 
     const metar = metarData[0] ?? null;
     const taf = tafData[0] ?? null;
 
     if (!metar && !taf) {
       return NextResponse.json<ApiWeatherResponse>(
-        { error: `No weather data found for ${station}. Verify the ICAO code.` },
+        { error: `No METAR or TAF available for ${station}. Not all airports publish weather reports — try a nearby towered airport, or check that the identifier is correct.` },
         { status: 404 }
       );
     }
